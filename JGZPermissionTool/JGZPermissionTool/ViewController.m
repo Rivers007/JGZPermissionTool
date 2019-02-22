@@ -23,19 +23,35 @@
 }
 -(void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath{
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
+    JGZPermissionType PermissionType;
     switch (indexPath.row) {
         case 0:
-            [self photoPermisson];
+//            [self photoPermisson];
+            PermissionType=PermissionType_PhPhoto;
             break;
         case 1:
-            [self cameraPermisson];
+//            [self cameraPermisson];
+            PermissionType=PermissionType_Video;
             break;
         case 2:
-            [self audioPermisson];
+//            [self audioPermisson];
+            PermissionType=PermissionType_Audio;
+            break;
+        case 3:
+            //            [self audioPermisson];
+            PermissionType=PermissionType_Location_WhenInuse;
+            break;
+        case 4:
+            //            [self audioPermisson];
+            PermissionType=PermissionType_Audio_Always;
             break;
         default:
+            PermissionType=-1;
             break;
     }
+    [JGZPermissionTool permissionToolWithPermissionType:PermissionType jumpToSetting:YES customBlock:^(JGZAuthorizationStatus status) {
+        
+    }];
 }
 -(void)photoPermisson{
     [JGZPermissionTool permissionToolWithPermissionType:PermissionType_PhPhoto jumpToSetting:NO customBlock:^(JGZAuthorizationStatus status) {

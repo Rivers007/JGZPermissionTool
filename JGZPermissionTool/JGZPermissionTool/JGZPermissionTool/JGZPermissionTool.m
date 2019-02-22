@@ -19,53 +19,61 @@
 #import <MediaPlayer/MediaPlayer.h>             //媒体资料库
 #import <UserNotifications/UserNotifications.h> //推送权限
 #import <CoreBluetooth/CoreBluetooth.h>         //蓝牙权限
-#import <Speech/Speech.h>                       //语音识别
+#import <Speech/Speech.h>//语音识别
+
+
+@interface JGZPermissionTool()
+
+@end
+
 @implementation JGZPermissionTool
-+(void)permissionToolWithPermissionType:(JGZPermissionType)permissionType jumpToSetting:(BOOL)jump customBlock:(nonnull void (^)(JGZAuthorizationStatus status))block{
++(void)permissionToolWithPermissionType:(JGZPermissionType)permissionType jumpToSetting:(BOOL)jump customBlock:(handleBlock)block{
+    JGZAuthorizationStatus Status;
     switch (permissionType) {
         case PermissionType_PhPhoto:
         {
-            JGZAuthorizationStatus Status=[self isPhPhotoAuthority];
-            if (Status==JGZAuthorizationStatusDenied||Status==JGZAuthorizationStatusRestricted) {
-                if (jump) {
-                  [JGZPermissionTool jumpSetting];
-                }
-            }
-            if (block) {
-                block(Status);
-            }
+            Status=[self isPhPhotoAuthority];
+            
         }
             break;
         case PermissionType_Video:
         {
-            JGZAuthorizationStatus Status=[self isVideo_AudioAuthorityWith:AVMediaTypeVideo];
-            if (Status==JGZAuthorizationStatusDenied||Status==JGZAuthorizationStatusRestricted) {
-                if (jump) {
-                    [JGZPermissionTool jumpSetting];
-                }
-            }
-            if (block) {
-                block(Status);
-            }
+            Status=[self isVideo_AudioAuthorityWith:AVMediaTypeVideo];
         }
             break;
         case PermissionType_Audio:
         {
-            JGZAuthorizationStatus Status=[self isVideo_AudioAuthorityWith:AVMediaTypeAudio];
-            if (Status==JGZAuthorizationStatusDenied||Status==JGZAuthorizationStatusRestricted) {
-                if (jump) {
-                    [JGZPermissionTool jumpSetting];
-                }
-            }
-            if (block) {
-                block(Status);
-            }
+            Status=[self isVideo_AudioAuthorityWith:AVMediaTypeAudio];
+            
+        }
+            break;
+        case PermissionType_Location_WhenInuse:
+        {
+            Status=[self isLocationAuthorityWith:PermissionType_Location_WhenInuse];
+
+        }
+            break;
+        case PermissionType_Audio_Always:
+        {
+            Status=[self isLocationAuthorityWith:PermissionType_Audio_Always];
         }
             break;
         default:
             break;
     }
+    [self operationWithStatus:Status jump:jump Block:block];
+
    
+}
++(void)operationWithStatus:(JGZAuthorizationStatus)Status jump:(BOOL)jump Block:(handleBlock)block{
+    if (Status==JGZAuthorizationStatusDenied||Status==JGZAuthorizationStatusRestricted) {
+        if (jump) {
+            [JGZPermissionTool jumpSetting];
+        }
+    }
+    if (block) {
+        block(Status);
+    }
 }
 +(JGZAuthorizationStatus)isPhPhotoAuthority{
     PHAuthorizationStatus photoAuthorStatus = [PHPhotoLibrary authorizationStatus];
@@ -94,7 +102,6 @@
             break;
     }
 }
-
 +(JGZAuthorizationStatus)isVideo_AudioAuthorityWith:(AVMediaType)Type{
     AVAuthorizationStatus videoAuthStatus = [AVCaptureDevice authorizationStatusForMediaType:Type];
     switch (videoAuthStatus) {
@@ -122,6 +129,36 @@
         default:
             break;
     }
+    
+}
+static  CLLocationManager *LocationManager;
++(JGZAuthorizationStatus)isLocationAuthorityWith:(JGZPermissionType)permissionType{
+    if ([CLLocationManager locationServicesEnabled] && ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusAuthorizedWhenInUse || [CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermined)) {
+        //定位功能可用
+        if ([CLLocationManager authorizationStatus] == kCLAuthorizationStatusNotDetermined) {
+            if (!LocationManager) {
+              LocationManager=[[CLLocationManager alloc] init];
+            }
+            
+            if (permissionType==PermissionType_Location_WhenInuse) {
+                [LocationManager requestWhenInUseAuthorization];
+            }else{
+                [LocationManager requestAlwaysAuthorization];
+            }
+            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(180 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+                LocationManager=nil;
+            });
+           return JGZAuthorizationStatusNotDetermined;
+        }
+        return JGZAuthorizationStatusAuthorized;
+    }else if ([CLLocationManager authorizationStatus] ==kCLAuthorizationStatusDenied) {
+        //定位不能用
+      return JGZAuthorizationStatusDenied;
+    }else if ([CLLocationManager authorizationStatus] ==kCLAuthorizationStatusRestricted){
+      return JGZAuthorizationStatusRestricted;
+    }
+    
+    return JGZAuthorizationStatusAuthorized;
     
 }
 +(void)jumpSetting{
